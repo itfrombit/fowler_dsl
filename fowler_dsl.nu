@@ -1,38 +1,38 @@
 ;; fowler_dsl.nu
-;; 
+;;
 ;; INTRODUCTION
 ;;
 ;; This is a Nu implementation of a Domain Specific Language example that
 ;; appeared in the following article by Martin Fowler:
 ;;   "Language Workbenches: The Killer-App for Domain Specific Languages?"
 ;;   http://martinfowler.com/articles/languageWorkbench.html
-;; 
+;;
 ;; This Nu version is adapted from a nicely-done Common Lisp version of
 ;; the example by Rainer Joswig.  After Rainer saw the Java and C# versions
 ;; that Martin Fowler and others had done in the above article, he knew he
 ;; could do better.
-;; 
+;;
 ;; Rainer has an article explaining his take on the example problem:
 ;;   http://lispm.dyndns.org/news?ID=NEWS-2005-07-08-1
-;; 
+;;
 ;; Even better, watch Rainer's screencast in which he develops
 ;; the solution from scratch in about 15 minutes using Common Lisp.
 ;;   http://www.cl-http.org:8002/mov/dsl-in-lisp.mov
-;; 
-;; 
+;;
+;;
 ;; I ported Rainer's Common Lisp version to Nu as part of testing out
 ;; the new macro-1 features in Nu 0.4.  I added a simple dispatching
-;; mechanism and some sample debugging output as part of the 
+;; mechanism and some sample debugging output as part of the
 ;; code-generation in the macro.
 ;;
-;; 
+;;
 ;; SYSTEM REQUIREMENTS
-;; 
+;;
 ;; This code requires Nu 0.4 or above.
-;; 
-;; 
+;;
+;;
 ;; AUTHOR
-;; 
+;;
 ;; The original Common Lisp code was written by Rainer Joswig.
 ;; This Nu version was written by Jeff Buck.
 
@@ -53,11 +53,13 @@
 ;; ------------------------------------------------------------------
 ;; The "defmapping" macro does most of the heavy lifting.  We generate
 ;; a class for each record type.
-;; 
-;; The main method in the class is a class method named parseLine.
-;; It creates an instance of the class, sets an ivar for each parsed 
-;; field, and returns the new instance.
-;; 
+;;
+;; The main method in the class is initWithData.
+;; initWithData is passed a string of data that corresponds to a single
+;; record.  Each of the fixed length fields in the data string is parsed
+;; out according to the mapping spec (held in the *description parameter).
+;; An ivar is then set for each parsed field.
+;;
 ;; The dump method is just a simple debugging tool that prints out
 ;; a representation of the class.
 ;;
@@ -75,16 +77,17 @@
                  (ivars)
                  (ivar-accessors)
                  
-                 ;; class method to create an object that will be
-                 ;; the representation of the passed-in string data
-                 (+ (id) parseLine: (id) line is
-                    (set object ((,name alloc) init))
+                 ;; create an class instance that will be
+                 ;; the representation of the passed-in string
+                 ;; data
+                 (- (id) initWithData: (id) data is
+                    (super init)
                     ((quote ,*description) each:
                      (do (v)
-                         (object setValue:(line substringWithRange: 
-											(list (first v) (+ 1 (- (second v) (first v)))))
-                                 forIvar:((third v) stringValue))))
-                    object)
+                         (self setValue:(data substringWithRange:
+                                              (list (first v) (+ 1 (- (second v) (first v)))))
+                               forIvar:((third v) stringValue))))
+                    self)
                  
                  ;; generate a dump function for debug output
                  (- (void) dump is
@@ -106,8 +109,11 @@
 (function parseRecords (data)
      ((data lines) map:
       (do (l)
-          (($mappingDispatcher valueForKey:(l substringWithRange:$dispatchFieldRange))
-           parseLine:l))))
+          (set dispatchclass
+               ($mappingDispatcher valueForKey:(l substringWithRange:$dispatchFieldRange)))
+          ;; skip mappings that we don't have a dispatch class for
+          (if (dispatchclass)
+              (then ((dispatchclass alloc) initWithData:l))))))
 
 
 ;; ------------------------------------------------------------------
@@ -132,6 +138,7 @@
 SVCLFOWLER         10101MS0120050313.........................
 SVCLHOHPE          10201DX0320050315........................
 SVCLTWO           x10301MRP220050329..............................
+BOGUS
 USGE10301TWO          x50214..7050329...............................
 END
 )
