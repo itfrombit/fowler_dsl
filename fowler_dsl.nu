@@ -82,7 +82,7 @@
                  ;; data
                  (- (id) initWithData: (id) data is
                     (super init)
-                    ((quote ,*description) each:
+                    (',*description each:
                      (do (v)
                          (self setValue:(data substringWithRange:
                                               (list (first v) (+ 1 (- (second v) (first v)))))
